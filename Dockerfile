@@ -1,4 +1,4 @@
-FROM alpine:3.23.3 as build
+FROM alpine:3.23.3 AS build
 
 ARG SQUID_VER=7.4
 
@@ -105,8 +105,8 @@ RUN sed -i '1s;^;include /etc/squid/conf.d/*.conf\n;' /etc/squid/squid.conf && \
 
 FROM alpine:3.23.3
 	
-ENV SQUID_CONFIG_FILE /etc/squid/squid.conf
-ENV TZ Europe/Moscow
+ENV SQUID_CONFIG_FILE=/etc/squid/squid.conf
+ENV TZ=UTC
 
 RUN set -x && \
 	deluser squid 2>/dev/null; delgroup squid 2>/dev/null; \
@@ -119,7 +119,8 @@ RUN apk add --no-cache \
 		libltdl \
 		apache2-utils \
 		curl \
-		tzdata
+		tzdata \
+		openssl
 
 COPY --from=build /etc/squid/ /etc/squid/
 COPY --from=build /usr/lib/squid/ /usr/lib/squid/
@@ -139,9 +140,12 @@ RUN install -d -o squid -g squid \
 	touch /etc/squid/conf.d/placeholder.conf
 COPY localnet.conf /etc/squid/conf.d/
 COPY squid-log.conf /etc/squid/conf.d.tail/
+COPY squid-default.conf /etc/squid/squid.conf
+
+RUN openssl req -newkey rsa:2048 -nodes -x509 -days 3650 -keyout /etc/squid/key.pem -out /etc/squid/cert.pem -subj "/CN=proxy" && chown squid:squid /etc/squid/key.pem /etc/squid/cert.pem
 
 VOLUME ["/var/cache/squid"]
-EXPOSE 3128/tcp
+EXPOSE 3128 3129
 
 USER squid
 

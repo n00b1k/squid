@@ -138,11 +138,19 @@ RUN install -d -o squid -g squid \
 		/etc/squid/conf.d \
 		/etc/squid/conf.d.tail && \
 	touch /etc/squid/conf.d/placeholder.conf
+
 COPY localnet.conf /etc/squid/conf.d/
 COPY squid-log.conf /etc/squid/conf.d.tail/
 COPY squid-default.conf /etc/squid/squid.conf
+COPY blocked_sites /etc/squid/blocked_sites
 
-RUN openssl req -newkey rsa:2048 -nodes -x509 -days 3650 -keyout /etc/squid/key.pem -out /etc/squid/cert.pem -subj "/CN=proxy" && chown squid:squid /etc/squid/key.pem /etc/squid/cert.pem
+RUN mkdir -p /var/lib/squid/ssl \
+    && chown squid:squid /var/lib/squid/ssl
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 VOLUME ["/var/cache/squid"]
 EXPOSE 3128 3129

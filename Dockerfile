@@ -1,4 +1,4 @@
-FROM alpine:3.23.3 as build
+FROM alpine:3.23.3 AS build
 
 ARG SQUID_VER=7.4
 
@@ -105,8 +105,8 @@ RUN sed -i '1s;^;include /etc/squid/conf.d/*.conf\n;' /etc/squid/squid.conf && \
 
 FROM alpine:3.23.3
 	
-ENV SQUID_CONFIG_FILE /etc/squid/squid.conf
-ENV TZ Europe/Moscow
+ENV SQUID_CONFIG_FILE=/etc/squid/squid.conf
+ENV TZ=UTC
 
 RUN set -x && \
 	deluser squid 2>/dev/null; delgroup squid 2>/dev/null; \
@@ -118,8 +118,9 @@ RUN apk add --no-cache \
 		libcap \
 		libltdl \
 		apache2-utils \
-		curl \
-		tzdata
+#		curl \
+		tzdata \
+		openssl
 
 COPY --from=build /etc/squid/ /etc/squid/
 COPY --from=build /usr/lib/squid/ /usr/lib/squid/
@@ -137,11 +138,22 @@ RUN install -d -o squid -g squid \
 		/etc/squid/conf.d \
 		/etc/squid/conf.d.tail && \
 	touch /etc/squid/conf.d/placeholder.conf
+
 COPY localnet.conf /etc/squid/conf.d/
 COPY squid-log.conf /etc/squid/conf.d.tail/
+COPY squid-default.conf /etc/squid/squid.conf
+COPY blocked_sites /etc/squid/blocked_sites
+
+RUN mkdir -p /var/lib/squid/ssl \
+    && chown squid:squid /var/lib/squid/ssl
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]
 
 VOLUME ["/var/cache/squid"]
-EXPOSE 3128/tcp
+EXPOSE 3128 3129
 
 USER squid
 

@@ -118,7 +118,7 @@ RUN apk add --no-cache \
 		libcap \
 		libltdl \
 		apache2-utils \
-		curl \
+#		curl \
 		tzdata \
 		openssl
 
